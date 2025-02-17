@@ -1,0 +1,40 @@
+.wrapper {
+  width: 300px;
+  margin: 20px;
+}
+
+.control {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.control.is-loading {
+  border-color: #007bff;
+}
+
+.input {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.list {
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.list-item {
+  display: block;
+  padding: 8px;
+  text-decoration: none;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+.list-item:hover {
+  background-color: #f5f5f5;
+}

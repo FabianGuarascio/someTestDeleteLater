@@ -1,0 +1,13 @@
+.map-container {
+  width: 100%; /* Make the container responsive */
+  height: 100vh; /* Adjust height as needed */
+  max-width: 800px; /* Optional: Set a max width */
+  max-height: 500px; /* Optional: Set a max height */
+  overflow: hidden; /* Prevent overflow */
+}
+
+#map {
+  width: 100%; /* Make the SVG responsive */
+  height: 100%; /* Make the SVG responsive */
+  // preserveAspectRatio: xMidYMid meet; /* Maintain aspect ratio */
+}
