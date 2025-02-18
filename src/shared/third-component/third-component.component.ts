@@ -5,6 +5,7 @@ import { AgCharts } from "ag-charts-angular";
 import { MarkerService } from '../../app/marker.service';
 import { ProjectCreation } from './types/types';
 import { usaPoints } from './mockData/usa-points';
+import { usaLines1 } from './topology-lines';
 @Component({
   selector: 'app-third-component',
   imports: [],
@@ -15,6 +16,7 @@ export class ThirdComponentComponent {
 
   public geojson = topologyUsa
   public usaPoints = usaPoints
+  public usaLines = usaLines1;
   private resizeObserver: ResizeObserver | null = null;
   mapContainer = viewChild<ElementRef<HTMLElement>>('mapContainer')
   map = viewChild<ElementRef<SVGSVGElement>>('map')
@@ -148,14 +150,33 @@ export class ThirdComponentComponent {
     // Calculate the bounding box of the GeoJSON features
     const boundingBox = this.calculateBoundingBox(this.geojson.features);
     this.renderBackgroundMap(svg, boundingBox, width,height)
+    this.renderLines(svg, boundingBox, width, height);
     this.renderMarkerPoints(svg, boundingBox, width,height)
-    
-    this.usaPoints.forEach(point=>{
-      const [xPoint, yPoint] = this.project( point.longitude, point.latitude,boundingBox, width, height);
-      this.markerService.createSvgCustomPlusCricle(xPoint,yPoint,2,point.count).forEach(el=>{
-        svg.appendChild(el)
-      })
-    })
+  }
+
+  // Render a line
+  renderLine(coordinates: number[][], svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
+    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  
+    // Convert geographic coordinates to SVG coordinates
+    const points = coordinates
+      .map((coord) => this.project(coord[0], coord[1], boundingBox, width, height).join(','))
+      .join(' ');
+  
+    polyline.setAttribute('points', points);
+    polyline.setAttribute('stroke', '#000'); // Line color
+    polyline.setAttribute('stroke-width', '2'); // Line thickness
+    polyline.setAttribute('fill', 'none'); // No fill
+    svg.appendChild(polyline);
+  }
+
+  renderLines(svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
+    this.usaLines.features.forEach((feature: any) => {
+      const geometry = feature.geometry;
+      if (geometry.type === 'LineString') {
+        this.renderLine(geometry.coordinates, svg, boundingBox, width, height);
+      }
+    });
   }
 
 }
