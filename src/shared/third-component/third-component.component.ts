@@ -3,6 +3,8 @@ import { topologyUsa } from './topology';
 import "ag-charts-enterprise";
 import { AgCharts } from "ag-charts-angular";
 import { MarkerService } from '../../app/marker.service';
+import { ProjectCreation } from './types/types';
+import { usaPoints } from './mockData/usa-points';
 @Component({
   selector: 'app-third-component',
   imports: [],
@@ -12,6 +14,7 @@ import { MarkerService } from '../../app/marker.service';
 export class ThirdComponentComponent {
 
   public geojson = topologyUsa
+  public usaPoints = usaPoints
   private resizeObserver: ResizeObserver | null = null;
   mapContainer = viewChild<ElementRef<HTMLElement>>('mapContainer')
   map = viewChild<ElementRef<SVGSVGElement>>('map')
@@ -29,7 +32,6 @@ export class ThirdComponentComponent {
       this.resizeObserver.disconnect();
     }
   }
-
   // Calculate the bounding box of the GeoJSON features
   calculateBoundingBox(features: any[]): { minLongitude: number, maxLongitude: number, minLatitude: number, maxLatitude: number } {
     let minLongitude = Infinity;
@@ -81,11 +83,9 @@ export class ThirdComponentComponent {
   // Project geographic coordinates to SVG coordinates
   project(longitude: number, latitude: number, boundingBox: any, width: number, height: number): [number, number] {
     const { minLongitude, maxLongitude, minLatitude, maxLatitude } = boundingBox;
-
     // Normalize longitude and latitude to fit the SVG dimensions
     const x = ((longitude - minLongitude) / (maxLongitude - minLongitude)) * width;
     const y = ((maxLatitude - latitude) / (maxLatitude - minLatitude)) * height; // Flip y-axis
-
     return [x, y];
   }
 
@@ -97,51 +97,35 @@ export class ThirdComponentComponent {
       .join(' ');
     polygon.setAttribute('points', points);
     polygon.setAttribute('data-name', properties.name);
-    polygon.setAttribute('fill', '#ccc'); // Default fill color
-    polygon.setAttribute('stroke', '#333'); // Default stroke color
+    polygon.setAttribute('fill', '#E5F1CC'); // Default fill color
+    polygon.setAttribute('stroke', '#E5F1CC'); // Default stroke color
     polygon.setAttribute('stroke-width', '0.5');
     svg.appendChild(polygon);
   }
 
-  // Render a marker with a badge number
-  renderMarker( longitude: number,latitude: number, label: string, badgeNumber: number, svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
-    const [x, y] = this.project(longitude, latitude, boundingBox, width, height);
 
-    console.log("desde eñ render marker",x,y)
 
-    // Create a circle for the marker
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', x.toString());
-    circle.setAttribute('cy', y.toString());
-    circle.setAttribute('r', '12'); // Radius of the circle
-    circle.setAttribute('fill', 'red'); // Marker color
-    circle.setAttribute('stroke', 'white'); // Marker border color
-    circle.setAttribute('stroke-width', '1');
-    circle.setAttribute('data-name', label);
-    circle.classList.add('marker');
+  renderBackgroundMap( svg:SVGSVGElement , boundingBox:any, width:number, height:number ){
+    this.geojson.features.forEach((feature: any) => {
+      const geometry = feature.geometry;
+      const properties = feature.properties;
+      if (geometry.type === 'Polygon') {
+        this.renderPolygon(geometry.coordinates, properties, svg, boundingBox, width, height);
+      } else if (geometry.type === 'MultiPolygon') {
+        geometry.coordinates.forEach((polygonCoords: number[][][]) => {
+          this.renderPolygon(polygonCoords, properties, svg, boundingBox, width, height);
+        });
+      }
+    });
+  }
 
-    // Add the marker to the SVG
-    svg.appendChild(circle);
-
-    // Add a badge number inside the circle
-    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', x.toString());
-    text.setAttribute('y', y.toString());
-    text.setAttribute('fill', 'white');
-    text.setAttribute('font-size', '10');
-    text.setAttribute('text-anchor', 'middle');
-    text.setAttribute('dominant-baseline', 'middle');
-    text.textContent = badgeNumber.toString();
-    svg.appendChild(text);
-
-    // Add a label for the marker (optional)
-    const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    labelText.setAttribute('x', (x + 15).toString()); // Offset the label
-    labelText.setAttribute('y', y.toString());
-    labelText.setAttribute('fill', 'black');
-    labelText.setAttribute('font-size', '12');
-    labelText.textContent = label;
-    svg.appendChild(labelText);
+  renderMarkerPoints( svg:SVGSVGElement, boundingBox:any, width:number ,height:number ){
+    this.usaPoints.forEach(point=>{
+      const [xPoint, yPoint] = this.project( point.longitude, point.latitude,boundingBox, width, height);
+      this.markerService.createSvgCustomPlusCricle(xPoint,yPoint,2,point.count).forEach(el=>{
+        svg.appendChild(el)
+      })
+    })
   }
 
   // Render the map
@@ -163,23 +147,15 @@ export class ThirdComponentComponent {
 
     // Calculate the bounding box of the GeoJSON features
     const boundingBox = this.calculateBoundingBox(this.geojson.features);
-
-    // Render each feature
-    this.geojson.features.forEach((feature: any) => {
-      const geometry = feature.geometry;
-      const properties = feature.properties;
-
-      if (geometry.type === 'Polygon') {
-        this.renderPolygon(geometry.coordinates, properties, svg, boundingBox, width, height);
-      } else if (geometry.type === 'MultiPolygon') {
-        geometry.coordinates.forEach((polygonCoords: number[][][]) => {
-          this.renderPolygon(polygonCoords, properties, svg, boundingBox, width, height);
-        });
-      }
-    });
-    // Example markers with badge numbers
-    const [x1, y1] = this.project( -118.2437, 34.0522,boundingBox, width, height);
-    const svgMarker = this.markerService.createSvgMarker(x1,y1, 1, 'New York');
-    svg.appendChild(svgMarker);
+    this.renderBackgroundMap(svg, boundingBox, width,height)
+    this.renderMarkerPoints(svg, boundingBox, width,height)
+    
+    this.usaPoints.forEach(point=>{
+      const [xPoint, yPoint] = this.project( point.longitude, point.latitude,boundingBox, width, height);
+      this.markerService.createSvgCustomPlusCricle(xPoint,yPoint,2,point.count).forEach(el=>{
+        svg.appendChild(el)
+      })
+    })
   }
+
 }
