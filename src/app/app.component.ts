@@ -1,12 +1,9 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
-import { FirstComponentComponent } from '../shared/first-component/first-component.component';
-import { SecondComponent } from "../shared/second/second.component";
-import { ThirdComponentComponent } from '../shared/third-component/third-component.component';
+import { MapComponent } from '../shared/third-component/map.component';
 
 @Component({
   selector: 'app-root',
-  imports: [ FirstComponentComponent, SecondComponent, ThirdComponentComponent],
+  imports: [MapComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

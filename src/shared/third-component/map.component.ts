@@ -1,18 +1,20 @@
 import { Component, ElementRef, inject, viewChild, ViewChild } from '@angular/core';
-import { topologyUsa } from './topology';
+import { topologyUsa } from './mockData/topology';
 import "ag-charts-enterprise";
-import { AgCharts } from "ag-charts-angular";
-import { MarkerService } from '../../app/marker.service';
-import { ProjectCreation } from './types/types';
 import { usaPoints } from './mockData/usa-points';
-import { usaLines1 } from './topology-lines';
+import { usaLines1 } from './mockData/topology-lines';
+import { MarkerService } from '../services/marker/marker.service';
 @Component({
   selector: 'app-third-component',
   imports: [],
-  templateUrl: './third-component.component.html' ,
-  styleUrl: './third-component.component.scss'
+  template: ` 
+    <div #mapContainer class="map-container">
+      <svg #map></svg>
+    </div>
+    ` ,
+  styleUrl: './map.component.scss'
 })
-export class ThirdComponentComponent {
+export class MapComponent {
 
   public geojson = topologyUsa
   public usaPoints = usaPoints
