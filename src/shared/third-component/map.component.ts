@@ -4,6 +4,7 @@ import "ag-charts-enterprise";
 import { usaPoints } from './mockData/usa-points';
 import { usaLines1 } from './mockData/topology-lines';
 import { MarkerService } from '../services/marker/marker.service';
+import { BoundingBox, GeoJSONData, GeoJSONFeature, isMultiPolygon, isPolygon, USALinesData, USAPoint } from '../types/types';
 @Component({
   selector: 'app-third-component',
   imports: [],
@@ -16,9 +17,9 @@ import { MarkerService } from '../services/marker/marker.service';
 })
 export class MapComponent {
 
-  public geojson = topologyUsa
-  public usaPoints = usaPoints
-  public usaLines = usaLines1;
+  public geojson: GeoJSONData  = topologyUsa as GeoJSONData
+  public usaPoints: USAPoint[] = usaPoints as USAPoint[]
+  public usaLines:USALinesData = usaLines1 as USALinesData;
   private resizeObserver: ResizeObserver | null = null;
   mapContainer = viewChild<ElementRef<HTMLElement>>('mapContainer')
   map = viewChild<ElementRef<SVGSVGElement>>('map')
@@ -37,7 +38,7 @@ export class MapComponent {
     }
   }
   // Calculate the bounding box of the GeoJSON features
-  calculateBoundingBox(features: any[]): { minLongitude: number, maxLongitude: number, minLatitude: number, maxLatitude: number } {
+  calculateBoundingBox(features: GeoJSONFeature[]): BoundingBox {
     let minLongitude = Infinity;
     let maxLongitude = -Infinity;
     let minLatitude = Infinity;
@@ -47,13 +48,13 @@ export class MapComponent {
       const geometry = feature.geometry;
 
       if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
-        const coordinates = geometry.coordinates;
-
+        
         // Handle MultiPolygon (nested one level deeper)
-        if (geometry.type === 'MultiPolygon') {
-          coordinates.forEach((polygon: number[][][]) => {
-            polygon.forEach((ring: number[][]) => {
-              ring.forEach((coord: number[]) => {
+        if (isMultiPolygon(geometry)) {
+          const coordinates = geometry.coordinates;
+          coordinates.forEach((polygon) => {
+            polygon.forEach((ring) => {
+              ring.forEach((coord) => {
                 if (Array.isArray(coord) && coord.length >= 2) {
                   const [longitude, latitude] = coord;
                   if (longitude < minLongitude) minLongitude = longitude;
@@ -64,8 +65,9 @@ export class MapComponent {
               });
             });
           });
-        } else if (geometry.type === 'Polygon') {
+        } else if (isPolygon(geometry)) {
           // Handle Polygon
+          const coordinates = geometry.coordinates;
           coordinates.forEach((ring: number[][]) => {
             ring.forEach((coord: number[]) => {
               if (Array.isArray(coord) && coord.length >= 2) {
@@ -85,7 +87,7 @@ export class MapComponent {
   }
 
   // Project geographic coordinates to SVG coordinates
-  project(longitude: number, latitude: number, boundingBox: any, width: number, height: number): [number, number] {
+  project(longitude: number, latitude: number, boundingBox: BoundingBox, width: number, height: number): [number, number] {
     const { minLongitude, maxLongitude, minLatitude, maxLatitude } = boundingBox;
     // Normalize longitude and latitude to fit the SVG dimensions
     const x = ((longitude - minLongitude) / (maxLongitude - minLongitude)) * width;
@@ -94,7 +96,7 @@ export class MapComponent {
   }
 
   // Render a polygon
-  renderPolygon(coordinates: number[][][], properties: any, svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
+  renderPolygon(coordinates: number[][][], properties: any, svg: SVGSVGElement, boundingBox: BoundingBox, width: number, height: number) {
     const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     const points = coordinates[0]
       .map((coord) => this.project(coord[0], coord[1], boundingBox, width, height).join(','))
@@ -109,13 +111,13 @@ export class MapComponent {
 
 
 
-  renderBackgroundMap( svg:SVGSVGElement , boundingBox:any, width:number, height:number ){
-    this.geojson.features.forEach((feature: any) => {
+  renderBackgroundMap( svg:SVGSVGElement , boundingBox:BoundingBox, width:number, height:number ){
+    this.geojson.features.forEach((feature) => {
       const geometry = feature.geometry;
       const properties = feature.properties;
-      if (geometry.type === 'Polygon') {
+      if (isPolygon(geometry)) {
         this.renderPolygon(geometry.coordinates, properties, svg, boundingBox, width, height);
-      } else if (geometry.type === 'MultiPolygon') {
+      } else if (isMultiPolygon(geometry)) {
         geometry.coordinates.forEach((polygonCoords: number[][][]) => {
           this.renderPolygon(polygonCoords, properties, svg, boundingBox, width, height);
         });
@@ -123,7 +125,7 @@ export class MapComponent {
     });
   }
 
-  renderMarkerPoints( svg:SVGSVGElement, boundingBox:any, width:number ,height:number ){
+  renderMarkerPoints( svg:SVGSVGElement, boundingBox:BoundingBox, width:number ,height:number ){
     this.usaPoints.forEach(point=>{
       const [xPoint, yPoint] = this.project( point.longitude, point.latitude,boundingBox, width, height);
       this.markerService.createSvgCustomPlusCricle(xPoint,yPoint,2,point.count).forEach(el=>{
@@ -157,7 +159,7 @@ export class MapComponent {
   }
 
   // Render a line
-  renderLine(coordinates: number[][], svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
+  renderLine(coordinates: number[][], svg: SVGSVGElement, boundingBox: BoundingBox, width: number, height: number) {
     const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
   
     // Convert geographic coordinates to SVG coordinates
@@ -172,12 +174,10 @@ export class MapComponent {
     svg.appendChild(polyline);
   }
 
-  renderLines(svg: SVGSVGElement, boundingBox: any, width: number, height: number) {
-    this.usaLines.features.forEach((feature: any) => {
+  renderLines(svg: SVGSVGElement, boundingBox: BoundingBox, width: number, height: number) {
+    this.usaLines.features.forEach((feature) => {
       const geometry = feature.geometry;
-      if (geometry.type === 'LineString') {
-        this.renderLine(geometry.coordinates, svg, boundingBox, width, height);
-      }
+      this.renderLine(geometry.coordinates, svg, boundingBox, width, height);
     });
   }
 
